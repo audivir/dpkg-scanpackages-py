@@ -164,7 +164,7 @@ def main():
             output=args.output
         ).scan()
     except ValueError as err:
-        print_error(err.message)
+        print_error(str(err))
 
 if __name__ == "__main__":
     main()
