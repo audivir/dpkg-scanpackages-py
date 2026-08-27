@@ -1,6 +1,6 @@
 """Utility functions for dpkg-scanpackages."""
 
-# ruff: noqa: PTH109, PTH123
+# ruff: noqa: PTH123
 from __future__ import annotations
 
 import fileinput
@@ -57,28 +57,28 @@ HEADER_ORDER = [
 
 
 class HasHeaders(Protocol):
-    """Base class for dpkg package information."""
+    """Interface for objects exposing dpkg package headers."""
 
     headers: dict[str, str]
 
 
 class DpkgInfoHeaders:
-    """Just the headers of a dpkg package."""
+    """Stores the headers of a dpkg package."""
 
     def __init__(self, headers: dict[str, str]) -> None:
-        """Initialize the class."""
+        """Initializes with the given package headers."""
         self.headers = headers
 
 
 def format_headers(headers: dict[str, str]) -> str:
-    """Format the headers."""
+    """Formats the headers, ordered by `HEADER_ORDER` then alphabetically."""
     pretty = ""
-    # add as per key order
+    # write fields in HEADER_ORDER first.
     for key in HEADER_ORDER:
         if key in headers:
             pretty = pretty + (f"{key}: {headers[key]}\n")
 
-    # add the rest alphabetically
+    # write remaining fields alphabetically.
     for key in sorted(headers):
         if key not in HEADER_ORDER:
             pretty = pretty + (f"{key}: {headers[key]}\n")
@@ -86,7 +86,7 @@ def format_headers(headers: dict[str, str]) -> str:
 
 
 def write_headers(output: IO[str] | str | None, packages: Sequence[HasHeaders]) -> None:
-    """Write the headers."""
+    """Writes the headers."""
     if not packages:
         raise ValueError("No packages to write")
 
@@ -97,11 +97,11 @@ def write_headers(output: IO[str] | str | None, packages: Sequence[HasHeaders]) 
             file.write(format_headers(p.headers))
 
 
-class FileInputRead(fileinput.FileInput):
-    """Implements a read(-1) function for FileInput."""
+class FileInputRead(fileinput.FileInput[str]):
+    """Wraps `fileinput.FileInput` to support a single full `read()` call."""
 
     def __init__(self, files: str | tuple[str, ...], add_newline: bool = False) -> None:
-        """Initialize the FileInputRead class."""
+        """Initializes a fresh FileInputRead over the given files."""
         super().__init__(files=files, encoding="utf-8")
         self._sep = "\n" if add_newline else ""
         self._fileno = 0
@@ -109,7 +109,12 @@ class FileInputRead(fileinput.FileInput):
         self._lines: list[str] | None = None
 
     def read(self, n: int = -1) -> str:
-        """Read up to n characters from the file."""
+        """Reads the full contents of all files.
+
+        Raises:
+            NotImplementedError: If `n` is not -1, since only full reads are supported.
+            ValueError: If called more than once on the same instance.
+        """
         if n != -1:
             raise NotImplementedError("can only read fully")
         if self._filelineno > 0 or self._fileno > 0:  # type: ignore[attr-defined]
@@ -118,15 +123,15 @@ class FileInputRead(fileinput.FileInput):
         self._lines = []
         for line in self:
             self._lines.append(line)
-            # if a new file is opened `nextfile()` is called
-            # and shifts the content to _file_contents.
-        # at the end we concat all files contents.
+            # nextfile() shifts the accumulated lines into _file_contents
+            # whenever a new file is opened.
+        # concatenate the contents of all files.
         return self._sep.join(self._file_contents)
 
     @override
     def nextfile(self) -> None:
-        """Close the current file and open the next one."""
-        if self._lines is not None:  # checks if read was called before
+        """Closes the current file and opens the next one."""
+        if self._lines is not None:  # checks whether read() was called before.
             self._file_contents.append("".join(self._lines))
             self._lines = []
         self._fileno += 1
@@ -137,7 +142,7 @@ class FileInputRead(fileinput.FileInput):
 def multi_open_read(
     input: IO[str] | str | tuple[str, ...] | None = None,  # noqa: A002
 ) -> Generator[SupportsRead[str]]:
-    """Open the provided file, file handle or stdin for reading."""
+    """Opens the provided file, file handle, or stdin for reading."""
     if input is None:
         yield sys.stdin
         return
@@ -156,7 +161,7 @@ def multi_open_read(
 def multi_open_write(
     output: IO[str] | str | None = None,
 ) -> Generator[SupportsWrite[str]]:
-    """Open the provided file, file handle or stdout for writing."""
+    """Opens the provided file, file handle, or stdout for writing."""
     if output is None:
         yield sys.stdout
     elif isinstance(output, str):

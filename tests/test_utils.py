@@ -22,7 +22,7 @@ from dpkg_scanpackages.utils import (
 if TYPE_CHECKING:
     from pathlib import Path
 
-    from .conftest import Helpers
+    from conftest import Helpers
 
 DARWIN_TMP = "/private/tmp"
 LINUX_TMP = "/tmp"
@@ -32,7 +32,7 @@ LINUX_TMP = "/tmp"
 def tmp() -> str:
     """Return the system's temporary directory."""
     if sys.platform not in {"darwin", "linux"}:
-        raise NotImplementedError("Unsupported platform")
+        raise NotImplementedError("Unsupported platform")  # pragma: no cover
 
     return DARWIN_TMP if sys.platform == "darwin" else LINUX_TMP
 
@@ -55,7 +55,7 @@ def test_format_headers(
     example_packages: list[dict[str, str]], example_formatted: list[str]
 ) -> None:
     if len(example_packages) != len(example_formatted):
-        raise AssertionError(
+        raise AssertionError(  # pragma: no cover
             "Length of example_packages and example_formatted must match"
         )
 
@@ -67,10 +67,8 @@ def test_format_headers(
     assert format_headers(pkg) == example_formatted[0].strip() + "\nMISSING: missing\n"
 
 
-def test_write_headers(
-    example_packages: list[dict[str, str]], example_content: str
-) -> None:
-    with pytest.raises(ValueError, match="^No packages to write$"):
+def test_write_headers(example_packages: list[dict[str, str]], example_content: str) -> None:
+    with pytest.raises(ValueError, match=r"^No packages to write$"):
         write_headers(None, [])
 
     output = StringIO()
@@ -85,7 +83,7 @@ def test_fileinputread(tmp_path: Path) -> None:
     with FileInputRead((str(tmp_path / "test"), str(tmp_path / "test2"))) as files:
         assert files.read() == "test\ntest2\n"
 
-        with pytest.raises(NotImplementedError, match="^can only read fully$"):
+        with pytest.raises(NotImplementedError, match=r"^can only read fully$"):
             files.read(1)
 
 
@@ -93,16 +91,14 @@ def test_fileinputread_fresh(tmp_path: Path) -> None:
     (tmp_path / "test").write_bytes(b"test\n")
     with FileInputRead(str(tmp_path / "test")) as file:
         assert file.readline() == "test\n"
-        with pytest.raises(ValueError, match="^can only read fresh instances$"):
+        with pytest.raises(ValueError, match=r"^can only read fresh instances$"):
             file.read()
 
 
 def test_fileinputread_newline(tmp_path: Path) -> None:
     (tmp_path / "test").write_bytes(b"test\n")
     (tmp_path / "test2").write_bytes(b"test2\n")
-    with FileInputRead(
-        (str(tmp_path / "test"), str(tmp_path / "test2")), True
-    ) as files:
+    with FileInputRead((str(tmp_path / "test"), str(tmp_path / "test2")), True) as files:
         assert files.read() == "test\n\ntest2\n"
 
 

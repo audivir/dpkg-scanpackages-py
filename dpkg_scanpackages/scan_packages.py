@@ -1,4 +1,4 @@
-"""Scan packages in a directory and generate a Packages file."""
+"""Scans packages in a directory and generates a Packages file."""
 
 # Copyright 2018 Raymond Velasquez
 
@@ -30,17 +30,10 @@ from typing import IO, TYPE_CHECKING
 from pydpkg.dpkg import Dpkg
 from tqdm import tqdm
 
-from dpkg_scanpackages.utils import (
-    DpkgInfoHeaders,
-    HasHeaders,
-    multi_open_read,
-    write_headers,
-)
+from dpkg_scanpackages.utils import DpkgInfoHeaders, HasHeaders, multi_open_read, write_headers
 
 if TYPE_CHECKING:
     from _typeshed import SupportsRead
-
-script_version = "0.4.1"
 
 FOUR_MB = 4 * 1024 * 1024
 
@@ -48,15 +41,15 @@ logger = logging.getLogger(__package__)
 
 
 class DpkgInfo:
-    """Information about a dpkg package."""
+    """Stores metadata headers for a single dpkg package file."""
 
     def __init__(self, binary_path: str, short_sha256: str | None = None) -> None:
-        """Initialize the class."""
+        """Initializes package metadata by reading `binary_path` with pydpkg."""
         self.binary_path = binary_path
         self.headers: dict[str, str] = {}
         pkg = Dpkg(self.binary_path)
 
-        # build the information for the apt repo
+        # build the information for the apt repo.
         self.pkg = pkg
         self.headers = pkg.headers
         self.headers["Filename"] = pkg.filename.replace("\\", "/")
@@ -74,16 +67,14 @@ class DpkgInfo:
 
 
 def read_packages_file(fd: SupportsRead[str]) -> list[dict[str, str]]:
-    """Read an existing Packages file."""
+    """Reads an existing Packages file."""
     content = fd.read()
     sections = content.split("\n\n")
     return [dict(message_from_string(section)) for section in sections if section]
 
 
-def calculate_4mb_sha256(
-    filename: str, filesize: int, sha256: str | None = None
-) -> str:
-    """Get the SHA256 hash of the first 4MB of the file."""
+def calculate_4mb_sha256(filename: str, filesize: int, sha256: str | None = None) -> str:
+    """Gets the SHA256 hash of the first 4MB of the file."""
     if (filesize <= FOUR_MB) and sha256:
         return sha256
     with open(filename, "rb") as file:
@@ -91,10 +82,10 @@ def calculate_4mb_sha256(
 
 
 def add_4mb_sha256(input: IO[str] | str, output: IO[str] | str | None) -> None:  # noqa: A002
-    """Helper function to add 4MBSHA256 to an existing Packages file.
+    """Adds a 4MBSHA256 field to an existing Packages file.
 
-    Doesn't check if the packages have changed, just adds the 4MBSHA256 field.
-    Additionally, sorts the packages by package name.
+    Does not check whether packages have changed; only adds the missing field and
+    sorts packages by name.
     """
     with multi_open_read(input) as read_fd:
         packages_ls = read_packages_file(read_fd)
@@ -112,9 +103,9 @@ def add_4mb_sha256(input: IO[str] | str, output: IO[str] | str | None) -> None: 
 
 
 class DpkgScanPackages:
-    """Scan packages in a directory and generate a Packages file."""
+    """Manages scanning packages in a directory and generating a Packages file."""
 
-    def __init__(
+    def __init__(  # noqa: PLR0913, PLR0917
         self,
         binary_path: str,
         multiversion: bool = False,
@@ -124,10 +115,10 @@ class DpkgScanPackages:
         previous: IO[str] | str | tuple[str, ...] | None = None,
         pbar: bool = True,
     ) -> None:
-        """Initialize the class."""
+        """Initializes a scan over `binary_path`, optionally reusing `previous` headers."""
         self.binary_path = binary_path
 
-        # throw an error if it's an invalid path
+        # raise an error if the path is invalid.
         if not os.path.isdir(self.binary_path):
             raise ValueError(f"binary path {self.binary_path} not found")
 
@@ -143,16 +134,14 @@ class DpkgScanPackages:
         else:
             with multi_open_read(previous) as fd:
                 previous_ls = read_packages_file(fd)
-            self.previous = {
-                elem["Filename"]: DpkgInfoHeaders(elem) for elem in previous_ls
-            }
+            self.previous = {elem["Filename"]: DpkgInfoHeaders(elem) for elem in previous_ls}
             self.previous = dict(sorted(self.previous.items()))
 
         self.pbar = pbar
 
     @staticmethod
     def _is_equal(curr: HasHeaders, prev: HasHeaders) -> bool:
-        """Check if the file is equal to the previous."""
+        """Checks whether the current file matches the previous one by size and 4MB SHA256."""
         prev_4mb_sha256 = prev.headers.get("4MBSHA256")
         prev_size_str = prev.headers.get("Size")
         if prev_4mb_sha256 is None or prev_size_str is None:
@@ -164,8 +153,8 @@ class DpkgScanPackages:
         return (prev_4mb_sha256 == curr_4mb_sha256) and (prev_size == curr_size)
 
     def _get_packages(self) -> None:
-        """Get the packages."""
-        # get all files
+        """Scans `binary_path` for matching package files and populates `package_list`."""
+        # get all files.
 
         cwd = Path.cwd()
         files = sorted(
@@ -175,7 +164,7 @@ class DpkgScanPackages:
 
         reused, wrong_arch, older_version = 0, 0, 0
         for fname in tqdm(files, desc="Scanning packages", disable=not self.pbar):
-            # extract the package information
+            # extract the package information.
             size = os.path.getsize(fname)
             short_sha256 = calculate_4mb_sha256(fname, size)
             curr = DpkgInfoHeaders({"Size": str(size), "4MBSHA256": short_sha256})
@@ -188,31 +177,27 @@ class DpkgScanPackages:
             else:
                 pkg_info = DpkgInfo(fname, short_sha256)
 
-            # if arch is defined and does not match package, move on to the next
-            if (
-                self.arch is not None
-                and str(pkg_info.headers["Architecture"]) != self.arch
-            ):
+            # if arch is defined and does not match the package, move on to the next.
+            if self.arch is not None and str(pkg_info.headers["Architecture"]) != self.arch:
                 wrong_arch += 1
                 continue
 
-            # if --multiversion switch is passed, append to the list
+            # if the --multiversion switch is passed, append to the list.
             if self.multiversion:
                 self.package_list.append(pkg_info)
             else:
-                # finf if package is already in the list
+                # find if the package is already in the list.
                 matched_items = [
                     (index, pkg)
                     for (index, pkg) in enumerate(self.package_list)
-                    if self.package_list
-                    and pkg.headers["Package"] == pkg_info.headers["Package"]
+                    if self.package_list and pkg.headers["Package"] == pkg_info.headers["Package"]
                 ]
                 if len(matched_items) == 0:
-                    # add if not
+                    # add it if not already present.
                     self.package_list.append(pkg_info)
                 else:
                     older_version += 1
-                    # compare versions and add if newer
+                    # compare versions and keep the newer one.
                     matched_index, matched_item = matched_items[0]
 
                     dpkg = Dpkg(pkg_info.headers["Filename"])
@@ -223,9 +208,7 @@ class DpkgScanPackages:
 
         previous_str = f"{reused} cache hits" if self.previous else "no cache"
         older_versions_str = (
-            f"{older_version} older versions"
-            if self.multiversion
-            else "multiversion used"
+            f"{older_version} older versions" if self.multiversion else "multiversion used"
         )
         logger.info(
             "Checked %d [%s] (%s, %d wrong arch) -> %d final packages",
@@ -236,10 +219,8 @@ class DpkgScanPackages:
             len(self.package_list),
         )
 
-    def scan(
-        self, return_list: bool = False
-    ) -> list[DpkgInfo | DpkgInfoHeaders] | None:
-        """Scan the packages."""
+    def scan(self, return_list: bool = False) -> list[DpkgInfo | DpkgInfoHeaders] | None:
+        """Scans the packages and writes or returns the resulting package list."""
         self._get_packages()
         if return_list:
             return self.package_list

@@ -1,46 +1,44 @@
-# dpkg-scanpackages.py
+# dpkg-scanpackages-py
 
 A Python implementation of Debian's `dpkg-scanpackages`.
 
-## Requirements
+## Prerequisites
 
-This script requires [python-dpkg](https://github.com/TheClimateCorporation/python-dpkg). Install from [PyPi](https://pypi.python.org/) using the [pip](https://packaging.python.org/installing/) tool:
+Python 3.10 or higher.
 
-```
-pip install pydpkg
+## Installation
+
+```shell
+pip install git+https://github.com/audivir/dpkg-scanpackages-py.git
 ```
 
 ## Usage
 
 ```
-usage: dpkg-scanpackages.py [-h] [-v] [-m] [-a ARCH] [-t TYPE] [-o OUTPUT]
-                            binary_path
+Usage: dpkg-scanpackages-py [OPTIONS] {binary_path}
 
-positional arguments:
-  binary_path
+Arguments:
+  binary_path      path to the binary directory. [required]
 
-optional arguments:
-  -h, --help                    show this help message and exit
-  -v, --version                 show the version.
-  -m, --multiversion            allow multiple versions of a single package.
-  -a ARCH, --arch ARCH          architecture to scan for.
-  -t TYPE, --type TYPE          scan for <type> packages (default is 'deb').
-  -o OUTPUT, --output OUTPUT    Write to file instead of stdout
+Options:
+  --multiversion  -m              allow multiple versions of a single package.
+  --arch          -a      <str>   architecture to scan for.
+  --type          -t      <str>   scan for <type> packages. [default: deb]
+  --output        -o      <path>  write to file instead of stdout.
+  --version       -v              show the version.
+  --help                          Show this message and exit.
 ```
 
-## Caveats
+On Windows, piping the output to a file results in CRLF line endings. Convert the
+file to unix-style (LF) line endings before using it in an apt repository, or use
+the `--output` argument to write directly to a file.
 
-* On Windows™, piping the output to a file results into a file with CRLF endings. File must me converted to unix-style (LF) line endings before using in an apt repo. Or use the `--output` parameter to save the output directly to file.
+## Acknowledgments
 
-## Changelog
+This project is a fork of [supermamon/dpkg-scanpackages-py](https://github.com/supermamon/dpkg-scanpackages-py)
+by Raymond Velasquez, which is itself a Python implementation of Debian's
+`dpkg-scanpackages`.
 
-* v0.4.0
-    * `--output` parameter. Write to file instead of stdout.
-* v0.3.0
-    * `--arch` and `--type` parameter support
-* v0.2.0
-    * `--multiversion` parameter support
-* v0.1.1
-    * variable name correction
-* v0.1.0
-    * Base functionality. No switches available besides `--help` and `--version`
+## License
+
+Apache License, Version 2.0. See `LICENSE` and `NOTICE`.

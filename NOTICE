@@ -1,0 +1,11 @@
+dpkg-scanpackages-py
+Copyright 2026 Tim Hörmann
+
+This project is a fork of supermamon/dpkg-scanpackages-py
+(https://github.com/supermamon/dpkg-scanpackages-py), which itself is a Python
+implementation of Debian's dpkg-scanpackages.
+
+Copyright 2018 Raymond Velasquez
+
+Licensed under the Apache License, Version 2.0. See the LICENSE file for the
+full license text.

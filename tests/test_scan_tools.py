@@ -19,7 +19,7 @@ from dpkg_scanpackages.scan_packages import (
 from dpkg_scanpackages.utils import DpkgInfoHeaders, multi_open_read
 
 if TYPE_CHECKING:
-    from .conftest import Helpers
+    from conftest import Helpers
 
 # OrigPackages - Created with dpkg-scanpackages (1.12.1)
 # Packages - OrigPackages with appended 4MBSHA256: lines
@@ -58,14 +58,10 @@ def test_read_packages_files_multiple(example_packages: list[dict[str, str]]) ->
 
 def test_calculate_4mb_sha256(tmp_path: Path) -> None:
     (tmp_path / "small_hash.txt").write_bytes(b"a" * 4 * 1024)
-    small_hash = calculate_4mb_sha256(
-        str(tmp_path / "small_hash.txt"), 4 * 1024, "small_hash"
-    )
+    small_hash = calculate_4mb_sha256(str(tmp_path / "small_hash.txt"), 4 * 1024, "small_hash")
     larger_size = 4 * 1024 * 1024 + 1
     (tmp_path / "large_hash.txt").write_bytes(b"a" * larger_size)
-    large_hash = calculate_4mb_sha256(
-        str(tmp_path / "large_hash.txt"), larger_size, "large_hash"
-    )
+    large_hash = calculate_4mb_sha256(str(tmp_path / "large_hash.txt"), larger_size, "large_hash")
     expected = hashlib.sha256(b"a" * 4 * 1024 * 1024).hexdigest()
     assert large_hash == expected
 
